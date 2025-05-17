@@ -1,4 +1,5 @@
 function helptext ($script) {# Show help sections from a script or offer available PSM1/PS1 files if none provided.
+$powershell = Split-Path $profile
 
 if ($script -eq "helptext") {$script = $PSCommandPath}
 
