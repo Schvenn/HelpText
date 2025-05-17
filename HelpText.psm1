@@ -17,8 +17,13 @@ $choice = Read-Host "`nEnter the number of the script to view"
 if ($choice -match '^\d+$') {$index = [int]$choice; if ($index -ge 1 -and $index -le $found.Count) {$script = $found[$index - 1].FullName} else {"" ; return}} else {"" ; return}}
 
 # Call the help menu.
-if (-not (Test-Path $script)) {""; return}
+$resolved = Resolve-Path $script -ErrorAction SilentlyContinue
+if (-not $resolved -or $resolved -notmatch ".psm?1") {$basename = $script; $found = Get-ChildItem -Path $powershell -Recurse -File -Include *.ps1, *.psm1 -ErrorAction SilentlyContinue | Where-Object {[System.IO.Path]::GetFileNameWithoutExtension($_.Name) -ieq $basename}
+if ($found.Count -eq 1) {$script = $found[0].FullName} else {""; return}}
+
+if (-not (Resolve-Path $script -ErrorAction SilentlyContinue)) {return}
 $scripthelp = Get-Content -Raw -Path $script; $sections = [regex]::Matches($scripthelp, "(?im)^## (.+?)(?=\r?\n)")
+if (-not $sections) {Write-Host -f cyan "`nThis is not a HelpText enabled file.`n"; return}
 if ($sections.Count -eq 1) {cls; Write-Host "$([System.IO.Path]::GetFileNameWithoutExtension($script)) Help:" -ForegroundColor Cyan; scripthelp $sections[0].Groups[1].Value; ""; return}
 $selection = $null
 do {cls; Write-Host "$([System.IO.Path]::GetFileNameWithoutExtension($script)) Help Sections:`n" -ForegroundColor Cyan; for ($i = 0; $i -lt $sections.Count; $i++) {
@@ -43,8 +48,8 @@ This function displays help sections embedded in script comments and has three m
 
 If you use it inside a script, you need to add the following content to that script:
 
-	param ([switch]$help)
-	if ($help) {helptext $PSCommandPath}
+param ([switch]$help)
+if ($help) {helptext $PSCommandPath}
 
 The parameter allows -help to be an option for the script and the "if" section ensures this function is called to handle the workload.
 ## Self-Contained Edition
