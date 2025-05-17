@@ -12,9 +12,9 @@ if (-not $script) {$basedir = Split-Path -Parent $profile; $profileFile = Get-It
 if ($profileFile -and (Get-Content -Raw $profileFile.FullName -ErrorAction SilentlyContinue) -match '##>\s*$') {$found += $profileFile}
 $found += Get-ChildItem -Path $basedir -Recurse -Include *.ps1,*.psm1 -ErrorAction SilentlyContinue | Where-Object {($_ | Get-Content -Raw -ErrorAction SilentlyContinue) -match '##>\s*$'}
 if (-not $found) {""; return}
-Write-Host "`nAvailable Help-Enabled Scripts:`n" -ForegroundColor Cyan
+Write-Host "`nAvailable Help-Enabled Modules:`n" -ForegroundColor Cyan
 for ($i = 0; $i -lt $found.Count; $i++) {"{0}: {1}" -f ($i + 1), ([System.IO.Path]::GetFileNameWithoutExtension($found[$i].FullName))}
-$choice = Read-Host "`nEnter the number of the script to view"
+$choice = Read-Host "`nEnter the number of the module to view"
 if ($choice -match '^\d+$') {$index = [int]$choice; if ($index -ge 1 -and $index -le $found.Count) {$script = $found[$index - 1].FullName} else {"" ; return}} else {"" ; return}}
 
 # Call the help menu.
