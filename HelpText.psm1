@@ -3,9 +3,25 @@ $powershell = Split-Path $profile
 
 if ($script -eq "helptext") {$script = $PSCommandPath}
 
+function wordwrap ($field, [int]$maximumlinelength = 72) {# Modify fields sent to it with proper word wrapping.
+if ($null -eq $field -or $field.Length -eq 0) {return $null}
+$breakchars = ',.;?!\/ '; $wrapped = @()
+
+foreach ($line in $field -split "`n") {if ($line.Trim().Length -eq 0) {$wrapped += ''; continue}
+$remaining = $line.Trim()
+while ($remaining.Length -gt $maximumlinelength) {$segment = $remaining.Substring(0, $maximumlinelength); $breakIndex = -1
+
+foreach ($char in $breakchars.ToCharArray()) {$index = $segment.LastIndexOf($char)
+if ($index -gt $breakIndex) {$breakChar = $char; $breakIndex = $index}}
+if ($breakIndex -lt 0) {$breakIndex = $maximumlinelength - 1; $breakChar = ''}
+$chunk = $segment.Substring(0, $breakIndex + 1).TrimEnd(); $wrapped += $chunk; $remaining = $remaining.Substring($breakIndex + 1).TrimStart()}
+
+if ($remaining.Length -gt 0) {$wrapped += $remaining}}
+return ($wrapped -join "`n")}
+
 function scripthelp ($section) {# (Internal) Generate the help sections from the comments section of the script.
 ""; Write-Host -f yellow ("-" * 100); $pattern = "(?ims)^## ($section.*?)(##|\z)"; $match = [regex]::Match($scripthelp, $pattern); $lines = $match.Groups[1].Value.TrimEnd() -split "`r?`n", 2; Write-Host $lines[0] -f yellow; Write-Host -f yellow ("-" * 100)
-if ($lines.Count -gt 1) {$lines[1] | Out-String | Out-Host -Paging}; Write-Host -f yellow ("-" * 100)}
+if ($lines.Count -gt 1) {wordwrap $lines[1] 100 | Out-String | Out-Host -Paging}; Write-Host -f yellow ("-" * 100)}
 
 # Present a menu of help-enabled scripts if no parameter was provided.
 if (-not $script) {$basedir = Split-Path -Parent $profile; $profileFile = Get-Item -Path $PROFILE -ErrorAction SilentlyContinue; $found = @()
@@ -63,9 +79,26 @@ The parameter allows -help to be an option for the script and the "if" section e
 ## Self-Contained Edition
 If however, you want to keep the help menu completely self-contained, perhaps because you want to share your script publicly, then use this body for the help script, instead:
 
-if ($help) {function scripthelp ($section) {# (Internal) Generate the help sections from the comments section of the script.
+if ($help) {function wordwrap ($field, [int]$maximumlinelength = 72) {# Modify fields sent to it with proper word wrapping.
+if ($null -eq $field -or $field.Length -eq 0) {return $null}
+$breakchars = ',.;?!\/ '; $wrapped = @()
+
+foreach ($line in $field -split "`n") {if ($line.Trim().Length -eq 0) {$wrapped += ''; continue}
+$remaining = $line.Trim()
+while ($remaining.Length -gt $maximumlinelength) {$segment = $remaining.Substring(0, $maximumlinelength); $breakIndex = -1
+
+foreach ($char in $breakchars.ToCharArray()) {$index = $segment.LastIndexOf($char)
+if ($index -gt $breakIndex) {$breakChar = $char; $breakIndex = $index}}
+if ($breakIndex -lt 0) {$breakIndex = $maximumlinelength - 1; $breakChar = ''}
+$chunk = $segment.Substring(0, $breakIndex + 1).TrimEnd(); $wrapped += $chunk; $remaining = $remaining.Substring($breakIndex + 1).TrimStart()}
+
+if ($remaining.Length -gt 0) {$wrapped += $remaining}}
+return ($wrapped -join "`n")}
+
+function scripthelp ($section) {# (Internal) Generate the help sections from the comments section of the script.
 ""; Write-Host -f yellow ("-" * 100); $pattern = "(?ims)^# # ($section.*?)(# #|\z)"; $match = [regex]::Match($scripthelp, $pattern); $lines = $match.Groups[1].Value.TrimEnd() -split "`r?`n", 2; Write-Host $lines[0] -f yellow; Write-Host -f yellow ("-" * 100)
-if ($lines.Count -gt 1) {$lines[1] | Out-String | Out-Host -Paging}; Write-Host -f yellow ("-" * 100)}
+if ($lines.Count -gt 1) {wordwrap $lines[1] 100 | Out-String | Out-Host -Paging}; Write-Host -f yellow ("-" * 100)}
+
 $scripthelp = Get-Content -Raw -Path $PSCommandPath; $sections = [regex]::Matches($scripthelp, "(?im)^# # (.+?)(?=\r?\n)")
 if ($sections.Count -eq 1) {cls; Write-Host "$([System.IO.Path]::GetFileNameWithoutExtension($PSCommandPath)) Help:" -f cyan; scripthelp $sections[0].Groups[1].Value; ""; return}
 $selection = $null
