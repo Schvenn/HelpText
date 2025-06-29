@@ -3,9 +3,13 @@ $powershell = Split-Path $profile
 
 if ($script -eq "helptext") {$script = $PSCommandPath}
 
-function wordwrap ($field, [int]$maximumlinelength = 72) {# Modify fields sent to it with proper word wrapping.
-if ($null -eq $field -or $field.Length -eq 0) {return $null}
+# Modify fields sent to it with proper word wrapping.
+function wordwrap ($field, $maximumlinelength) {if ($null -eq $field -or $field.Length -eq 0) {return $null}
 $breakchars = ',.;?!\/ '; $wrapped = @()
+
+if (-not $maximumlinelength) {[int]$maximumlinelength = (100, $Host.UI.RawUI.WindowSize.Width | Measure-Object -Maximum).Maximum}
+if ($maximumlinelength) {if ($maximumlinelength -lt 60) {[int]$maximumlinelength = 60}
+if ($maximumlinelength -gt $Host.UI.RawUI.BufferSize.Width) {[int]$maximumlinelength = $Host.UI.RawUI.BufferSize.Width}}
 
 foreach ($line in $field -split "`n") {if ($line.Trim().Length -eq 0) {$wrapped += ''; continue}
 $remaining = $line.Trim()
@@ -79,9 +83,12 @@ The parameter allows -help to be an option for the script and the "if" section e
 ## Self-Contained Edition
 If however, you want to keep the help menu completely self-contained, perhaps because you want to share your script publicly, then use this body for the help script, instead:
 
-if ($help) {function wordwrap ($field, [int]$maximumlinelength = 72) {# Modify fields sent to it with proper word wrapping.
-if ($null -eq $field -or $field.Length -eq 0) {return $null}
+if ($help) {function wordwrap ($field, $maximumlinelength) {if ($null -eq $field -or $field.Length -eq 0) {return $null}
 $breakchars = ',.;?!\/ '; $wrapped = @()
+
+if (-not $maximumlinelength) {[int]$maximumlinelength = (100, $Host.UI.RawUI.WindowSize.Width | Measure-Object -Maximum).Maximum}
+if ($maximumlinelength) {if ($maximumlinelength -lt 60) {[int]$maximumlinelength = 60}
+if ($maximumlinelength -gt $Host.UI.RawUI.BufferSize.Width) {[int]$maximumlinelength = $Host.UI.RawUI.BufferSize.Width}}
 
 foreach ($line in $field -split "`n") {if ($line.Trim().Length -eq 0) {$wrapped += ''; continue}
 $remaining = $line.Trim()
@@ -96,10 +103,10 @@ if ($remaining.Length -gt 0) {$wrapped += $remaining}}
 return ($wrapped -join "`n")}
 
 function scripthelp ($section) {# (Internal) Generate the help sections from the comments section of the script.
-""; Write-Host -f yellow ("-" * 100); $pattern = "(?ims)^# # ($section.*?)(# #|\z)"; $match = [regex]::Match($scripthelp, $pattern); $lines = $match.Groups[1].Value.TrimEnd() -split "`r?`n", 2; Write-Host $lines[0] -f yellow; Write-Host -f yellow ("-" * 100)
+""; Write-Host -f yellow ("-" * 100); $pattern = "(?ims)^## ($section.*?)(##|\z)"; $match = [regex]::Match($scripthelp, $pattern); $lines = $match.Groups[1].Value.TrimEnd() -split "`r?`n", 2; Write-Host $lines[0] -f yellow; Write-Host -f yellow ("-" * 100)
 if ($lines.Count -gt 1) {wordwrap $lines[1] 100 | Out-String | Out-Host -Paging}; Write-Host -f yellow ("-" * 100)}
 
-$scripthelp = Get-Content -Raw -Path $PSCommandPath; $sections = [regex]::Matches($scripthelp, "(?im)^# # (.+?)(?=\r?\n)")
+$scripthelp = Get-Content -Raw -Path $PSCommandPath; $sections = [regex]::Matches($scripthelp, "(?im)^## (.+?)(?=\r?\n)")
 if ($sections.Count -eq 1) {cls; Write-Host "$([System.IO.Path]::GetFileNameWithoutExtension($PSCommandPath)) Help:" -f cyan; scripthelp $sections[0].Groups[1].Value; ""; return}
 $selection = $null
 do {cls; Write-Host "$([System.IO.Path]::GetFileNameWithoutExtension($PSCommandPath)) Help Sections:`n" -f cyan; for ($i = 0; $i -lt $sections.Count; $i++) {
@@ -110,20 +117,17 @@ if ($input -match '^\d+$') {$index = [int]$input
 if ($index -ge 1 -and $index -le $sections.Count) {$selection = $index}
 else {$selection = $null}} else {""; return}}
 while ($true); return}
-
-Please note that in the expanded version of the script above, there are extra spaces between the hashtags "#", in order to prevent them from breaking this help screen formatting.
-You will need to remove those spaces in order to make it work.
 ## Help Section Design
 You will then place your help sections at the very bottom of the script file inside an extended comments section like this:
 
-< #
-# # Overview
+<#
+## Overview
 
 Details...
-# # Additional sections
+## Additional sections
 
 Add as many sections as you need, separated by the double hashes for each new title.
-# # >
+##>
 
-Remember to close with two hashes and a ">" at the end of the file and do not add spaces around the hashes, which are shown here only to prevent the script from breaking.
+Remember to close with two hashes and a ">" at the end of the file.
 ##>
